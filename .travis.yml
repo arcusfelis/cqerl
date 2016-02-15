@@ -1,0 +1,11 @@
+language: erlang
+sudo: required
+install: true
+
+services:
+        - docker
+
+otp_release:
+    - 17.5
+    - 18.1
+
