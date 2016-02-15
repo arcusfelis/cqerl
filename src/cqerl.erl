@@ -54,8 +54,6 @@
 
 -export_type([client/0, inet/0]).
 
--define(SEED, {erlang:unique_integer([positive]), erlang:unique_integer([positive]), erlang:unique_integer([positive])}).
-
 -record(cql_client_stats, {
     min_count :: integer(),
     max_count :: integer(),
@@ -257,7 +255,7 @@ start_link() ->
 
 
 init([]) ->
-    random:seed(?SEED),
+    random_seed(),
     process_flag(trap_exit, true),
     BaseState = #cqerl_state{clients = ets:new(clients, [set, private, {keypos, #cql_client.pid}]),
         client_stats = [],
@@ -651,3 +649,15 @@ try_select_client(Client, Req, From, State = #cqerl_state{clients = Clients, ret
             {noreply, State#cqerl_state{retrying=false}}
     end.
 
+random_seed() ->
+    % to provide better seeding than erlang:now() or os:timestamp()
+    <<B1:32/unsigned-integer,
+      B2:32/unsigned-integer,
+      B3:32/unsigned-integer>> = try crypto:strong_rand_bytes(12)
+    catch
+        error:low_entropy ->
+            error_logger:info_msg("quickrand: low_entropy!~n"),
+            crypto:rand_bytes(12)
+    end,
+    _ = random:seed(B1, B2, B3),
+    ok.
